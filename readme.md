@@ -91,20 +91,26 @@ Repository: `Daniel-Ric/CreatorGET-Service`
 
 ## Quickstart
 
+### 1) Install and run (recommended)
+
 ```bash
 git clone https://github.com/Daniel-Ric/CreatorGET-Service
 cd CreatorGET-Service
 npm i
 cp .env.example .env
-node bin/creatorservice.js
+npm start
 ```
 
-Optional global command via `npm link`:
+### 2) Optional global command
+
+If you prefer a global CLI command, link the package once:
 
 ```bash
 npm link
 creatorservice
 ```
+
+> `creatorgetservice` is still available as a backwards-compatible alias.
 
 ---
 
@@ -380,6 +386,12 @@ npm i
 ```
 
 ### Run the CLI
+
+```bash
+npm start
+```
+
+Equivalent direct command:
 
 ```bash
 node bin/creatorservice.js
