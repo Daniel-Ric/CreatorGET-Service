@@ -2,7 +2,11 @@
   "name": "creatorget-service",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "start": "node bin/creatorservice.js"
+  },
   "bin": {
+    "creatorservice": "./bin/creatorservice.js",
     "creatorgetservice": "./bin/creatorservice.js"
   },
   "dependencies": {
