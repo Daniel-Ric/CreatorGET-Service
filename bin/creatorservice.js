@@ -2,4 +2,9 @@
 import "dotenv/config";
 import {run} from "../src/app.js";
 
-await run();
+try {
+    await run();
+} catch (e) {
+    console.error(e?.message || String(e));
+    process.exitCode = 1;
+}
