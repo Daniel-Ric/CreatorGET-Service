@@ -7,6 +7,7 @@ import {
     browseFavorites,
     confirmFlow,
     diffMenu,
+    exportFormatMenu,
     fuzzySearchFlow,
     idsExportTypeMenu,
     mainMenu,
@@ -33,7 +34,7 @@ function header() {
     if (state.creators.length) parts.push(theme.dim(`Loaded: ${state.creators.length}`));
     if (state.fetchedAt) parts.push(theme.dim(`Fetched: ${state.fetchedAt}`));
     parts.push(theme.dim(`Mode: ${env.CREATORNAME_MODE}`));
-    return parts.join(theme.dim("  •  "));
+    return parts.join(theme.dim("  |  "));
 }
 
 function isCacheFresh(fetchedAt) {
@@ -60,7 +61,7 @@ async function refreshFromApi() {
     state.token = await promptToken(state.token || env.MC_TOKEN);
     if (!state.token) throw new Error("Missing token");
 
-    const spinner = ora({text: "Fetching creators…", color: "cyan"}).start();
+    const spinner = ora({text: "Fetching creators...", color: "cyan"}).start();
     try {
         const creators = await fetchCreators(state.token);
         state.creators = creators;
@@ -86,7 +87,7 @@ async function diffAgainstApi() {
     state.token = await promptToken(state.token || env.MC_TOKEN);
     if (!state.token) throw new Error("Missing token");
 
-    const spinner = ora({text: "Fetching for diff…", color: "cyan"}).start();
+    const spinner = ora({text: "Fetching for diff...", color: "cyan"}).start();
     try {
         const latest = await fetchCreators(state.token);
         spinner.succeed("Fetched latest creators");
@@ -118,14 +119,7 @@ async function exportSelection() {
     const picked = await selectionFlow(state.creators, state.favorites);
     if (!picked.length) return;
 
-    const format = await (await import("prompts")).default({
-        type: "select",
-        name: "pick",
-        message: "Export selection as:",
-        choices: [{title: "JSON", value: "json"}, {title: "CSV", value: "csv"}, {title: "Back", value: null}],
-        initial: 0
-    }).then((r) => r.pick);
-
+    const format = await exportFormatMenu();
     if (!format) return;
 
     if (format === "json") {
@@ -176,12 +170,16 @@ async function health() {
                 .slice(0, 60)
                 .map((x) => `${theme.warn(x.creatorName)}  ${theme.dim(x.items.map((i) => i.displayName).join(" | "))}`);
             console.log(lines.join("\n"));
-            if (coll.length > 60) console.log(theme.dim(`…and ${coll.length - 60} more`));
+            if (coll.length > 60) console.log(theme.dim(`...and ${coll.length - 60} more`));
         }
     }
 }
 
 export async function run() {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        throw new Error("CreatorService is an interactive CLI. Please run it in a real terminal.");
+    }
+
     state.token = String(env.MC_TOKEN || "").trim();
     await loadFavoritesIfAny();
     await loadCacheIfAny();

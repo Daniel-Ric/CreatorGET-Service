@@ -1,9 +1,19 @@
-import prompts from "prompts";
+import promptsLib from "prompts";
 import clipboardy from "clipboardy";
 import Fuse from "fuse.js";
 import {env} from "../config/env.js";
 import {theme} from "./theme.js";
 import {isFavorite, toggleFavorite} from "../favorites/favorites.store.js";
+
+function refreshScreen() {
+    if (!process.stdout.isTTY) return;
+    process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+}
+
+async function prompts(question) {
+    refreshScreen();
+    return await promptsLib(question);
+}
 
 function choice(title, value, hint) {
     return {title, value, description: hint || undefined};
@@ -42,7 +52,7 @@ export async function promptOutputPath(initialValue, label) {
 }
 
 function markTitle(c, favs) {
-    const star = isFavorite(favs, c.id) ? theme.accent("★ ") : theme.dim("  ");
+    const star = isFavorite(favs, c.id) ? theme.accent("* ") : theme.dim("  ");
     return `${star}${c.displayName}`;
 }
 
@@ -57,7 +67,7 @@ export async function browseCreators(creators, favs) {
 
         const choices = slice.map((c, idx) => choice(markTitle(c, favs), {type: "creator", index: start + idx}, c.id));
 
-        choices.push(choice(theme.dim("—"), "sep"));
+        choices.push(choice(theme.dim("---"), "sep"));
         if (page > 0) choices.push(choice("Previous page", {type: "prev"}));
         if (end < creators.length) choices.push(choice("Next page", {type: "next"}));
         choices.push(choice("Back", {type: "back"}));
@@ -84,7 +94,6 @@ export async function browseCreators(creators, favs) {
         }
         if (pick.type === "creator") {
             await creatorDetails(creators[pick.index], favs);
-
         }
     }
 }
@@ -99,32 +108,39 @@ export async function browseFavorites(creators, favs) {
 }
 
 export async function creatorDetails(c, favs) {
-    const title = `${theme.title(c.displayName)} ${theme.dim(`(${c.creatorName})`)}`;
-    const favLabel = isFavorite(favs, c.id) ? "Unfavorite" : "Favorite";
+    let notice = "";
 
-    const r = await prompts({
-        type: "select",
-        name: "action",
-        message: `${title}\n${theme.dim(c.id)}`,
-        choices: [choice(favLabel, "fav"), choice("Copy ID to clipboard", "copyId"), choice("Copy displayName to clipboard", "copyDisplay"), choice("Copy creatorName to clipboard", "copyCreator"), choice("Copy JSON snippet", "copyJson"), choice("Back", "back")],
-        initial: 0
-    });
+    while (true) {
+        const title = `${theme.title(c.displayName)} ${theme.dim(`(${c.creatorName})`)}`;
+        const favLabel = isFavorite(favs, c.id) ? "Unfavorite" : "Favorite";
+        const message = [title, theme.dim(c.id), notice].filter(Boolean).join("\n");
 
-    if (r.action === "fav") {
-        const on = await toggleFavorite(favs, c.id);
-        console.log(on ? theme.ok("Added to favorites.") : theme.ok("Removed from favorites."));
-    } else if (r.action === "copyId") {
-        await clipboardy.write(c.id);
-        console.log(theme.ok("Copied ID to clipboard."));
-    } else if (r.action === "copyDisplay") {
-        await clipboardy.write(c.displayName);
-        console.log(theme.ok("Copied displayName to clipboard."));
-    } else if (r.action === "copyCreator") {
-        await clipboardy.write(c.creatorName);
-        console.log(theme.ok("Copied creatorName to clipboard."));
-    } else if (r.action === "copyJson") {
-        await clipboardy.write(JSON.stringify(c, null, 2));
-        console.log(theme.ok("Copied JSON snippet to clipboard."));
+        const r = await prompts({
+            type: "select",
+            name: "action",
+            message,
+            choices: [choice(favLabel, "fav"), choice("Copy ID to clipboard", "copyId"), choice("Copy displayName to clipboard", "copyDisplay"), choice("Copy creatorName to clipboard", "copyCreator"), choice("Copy JSON snippet", "copyJson"), choice("Back", "back")],
+            initial: 0
+        });
+
+        if (!r.action || r.action === "back") return;
+
+        if (r.action === "fav") {
+            const on = await toggleFavorite(favs, c.id);
+            notice = on ? theme.ok("Added to favorites.") : theme.ok("Removed from favorites.");
+        } else if (r.action === "copyId") {
+            await clipboardy.write(c.id);
+            notice = theme.ok("Copied ID to clipboard.");
+        } else if (r.action === "copyDisplay") {
+            await clipboardy.write(c.displayName);
+            notice = theme.ok("Copied displayName to clipboard.");
+        } else if (r.action === "copyCreator") {
+            await clipboardy.write(c.creatorName);
+            notice = theme.ok("Copied creatorName to clipboard.");
+        } else if (r.action === "copyJson") {
+            await clipboardy.write(JSON.stringify(c, null, 2));
+            notice = theme.ok("Copied JSON snippet to clipboard.");
+        }
     }
 }
 
@@ -152,16 +168,18 @@ export async function fuzzySearchFlow(creators, favs) {
         return null;
     }
 
-    const r = await prompts({
-        type: "select",
-        name: "pick",
-        message: `Matches (${results.length}${results.length === 200 ? "+" : ""})`,
-        choices: results.map((c) => choice(markTitle(c, favs), c, c.id)).concat([choice("Back", null)]),
-        initial: 0
-    });
+    while (true) {
+        const r = await prompts({
+            type: "select",
+            name: "pick",
+            message: `Matches (${results.length}${results.length === 200 ? "+" : ""})`,
+            choices: results.map((c) => choice(markTitle(c, favs), c, c.id)).concat([choice("Back", null)]),
+            initial: 0
+        });
 
-    if (r.pick) await creatorDetails(r.pick, favs);
-    return null;
+        if (!r.pick) return null;
+        await creatorDetails(r.pick, favs);
+    }
 }
 
 export async function selectionFlow(creators, favs) {
@@ -231,16 +249,18 @@ export async function showListMenu(title, items, favs) {
         return null;
     }
 
-    const r = await prompts({
-        type: "select",
-        name: "pick",
-        message: title,
-        choices: items.slice(0, 300).map((c) => choice(markTitle(c, favs), c, c.id)).concat([choice("Back", null)]),
-        initial: 0
-    });
+    while (true) {
+        const r = await prompts({
+            type: "select",
+            name: "pick",
+            message: title,
+            choices: items.slice(0, 300).map((c) => choice(markTitle(c, favs), c, c.id)).concat([choice("Back", null)]),
+            initial: 0
+        });
 
-    if (r.pick) await creatorDetails(r.pick, favs);
-    return null;
+        if (!r.pick) return null;
+        await creatorDetails(r.pick, favs);
+    }
 }
 
 export async function showChangedMenu(title, items, favs) {
@@ -251,12 +271,14 @@ export async function showChangedMenu(title, items, favs) {
 
     const choices = items.slice(0, 300).map((x) => choice(`${x.to.displayName}`, x, `${x.from.displayName} -> ${x.to.displayName}`));
 
-    const r = await prompts({
-        type: "select", name: "pick", message: title, choices: choices.concat([choice("Back", null)]), initial: 0
-    });
+    while (true) {
+        const r = await prompts({
+            type: "select", name: "pick", message: title, choices: choices.concat([choice("Back", null)]), initial: 0
+        });
 
-    if (r.pick) await creatorDetails(r.pick.to, favs);
-    return null;
+        if (!r.pick) return null;
+        await creatorDetails(r.pick.to, favs);
+    }
 }
 
 export async function idsExportTypeMenu() {
@@ -265,6 +287,17 @@ export async function idsExportTypeMenu() {
         name: "pick",
         message: "Export IDs as:",
         choices: [choice("ids.txt", "txt"), choice("ids.json", "json"), choice("Back", null)],
+        initial: 0
+    });
+    return r.pick;
+}
+
+export async function exportFormatMenu() {
+    const r = await prompts({
+        type: "select",
+        name: "pick",
+        message: "Export selection as:",
+        choices: [choice("JSON", "json"), choice("CSV", "csv"), choice("Back", null)],
         initial: 0
     });
     return r.pick;
