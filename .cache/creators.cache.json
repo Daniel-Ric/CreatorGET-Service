@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-04-28T17:21:10.691Z",
+  "fetchedAt": "2026-06-16T07:19:12.225Z",
   "creators": [
     {
       "creatorName": "100Media",
@@ -50,11 +50,6 @@
       "creatorName": "AliquamStudios",
       "id": "master_player_account!375443FFB4618992",
       "displayName": "Aliquam Studios"
-    },
-    {
-      "creatorName": "Altearn",
-      "id": "master_player_account!DB802563B8C7766C",
-      "displayName": "Altearn"
     },
     {
       "creatorName": "AmbientCreations",
@@ -300,6 +295,11 @@
       "creatorName": "CreatorLabs",
       "id": "master_player_account!DE98BB485A90E3AB",
       "displayName": "CreatorLabs"
+    },
+    {
+      "creatorName": "CUBEGAMES",
+      "id": "master_player_account!DB802563B8C7766C",
+      "displayName": "CUBE GAMES"
     },
     {
       "creatorName": "CubeCraftGames",
@@ -1285,6 +1285,11 @@
       "creatorName": "SomeGameStudio",
       "id": "master_player_account!70A86D2BCEE493E9",
       "displayName": "Some Game Studio"
+    },
+    {
+      "creatorName": "SoulStudios",
+      "id": "master_player_account!CCBC5A9B379185C2",
+      "displayName": "Soul Studios"
     },
     {
       "creatorName": "SovaKnights",
